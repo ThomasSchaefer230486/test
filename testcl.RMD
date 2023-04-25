@@ -1,0 +1,198 @@
+---
+title: "Miete_Datenbankabfrage_v_8_11"
+author: "TS"
+date: "7 9 2020"
+output: html_document
+---
+
+### MUSS ANGEPASST WERDEN ###
+```{r}
+# Festlegen des Start- und Enddatums der Abfrage
+
+start_date = "2023-03-01"
+end_date = "2023-03-31"
+Monatsname = "März"
+```
+
+```{r}
+# laden der benÃ¶tigten libraries (in Bibliotheken/libraries sind Befehle vordefiniert und mÃ¼ssen nicht immer wieder neu angepasst werden)
+
+library(DBI)
+library(bit64)
+library(glue)
+library(dplyr)
+library(RClickhouse)
+library(data.table)
+library(lubridate)
+# Verbindung von R mit der Clickhouse Datenbank 
+#clickhouse <- dbConnect(clickhouse::clickhouse(), host="clickhouse-node2.live.bigdata.fue1.iwinsys.net",port=8123L, user="TeamResearchR", password="2e\"ab!qXnBG9s*Q$")
+#dbListTables(clickhouse)
+
+clickhouse <- dbConnect(clickhouse::clickhouse(), host="",port=, user="", password="")
+
+attributes = "lower(globalobjectkey) as globalobjectkey,toInt32(objectid) as objectid,toInt32(adrid) as adrid,fraud_level_id,createdate,changedate,estatetype,estatecategory,distributiontype,
+headline,textbodies,provisionid,provisiontext,geoid,locationid,cleanuplatitude,cleanuplongitude,geodescription,cleanupzip,city,
+cleanupstreet.streetname,cleanupstreet.streettype,cleanupstreet.housenumber,kaltmiete,nettokaltmiete,heizkosten,nebenkosten,warmmiete,
+inklnebenkosten,kaution,kaufpreis,hausgeld,stellplatzpreis,gesamtpreisinlandwaehrung,freiab,freibis,zimmer,wohnflaeche,grundstuecksflaeche,
+cleanupbaujahr,researchaltbau,researchbestand,researchneubau,researchzustand_saniert,researchzustand_renoviert,cleanupstockwerk,
+cleanupwohnungslage_dachgeschoss,cleanupwohnungslage_souterrain,cleanupwohnungslage_erdgeschoss,cleanupetagenwohnung,MOEBLIERT,
+cleanupmoebliert_teilweise_moebliert,cleanupmoebliert_voll_moebliert,cleanupaufzug_personenaufzug,cleanupkueche_einbaukueche,
+cleanupkueche_offene_kueche,KUECHE_SPEISEKAMMER,KUECHE_PANTRY,STELLPLATZ,SANITAER,SANITAER_BAD_WC_GETRENNT,cleanupsanitaer_bad_mit_dusche,
+cleanupsanitaer_bad_mit_wanne,cleanupsanitaer_bad_mit_fenster,SANITAER_GAESTE_WC,SANITAER_BIDET,BALKON_TERRASSE,cleanupbalkon_terrasse_balkon,
+cleanupbalkon_terrasse_dachterrasse,cleanupbalkon_terrasse_garten,cleanupbalkon_terrasse_terrasse,cleanupbalkon_terrasse_wintergarten,
+cleanupbalkon_terrasse_loggia,cleanupstellplatz_garage,cleanupstellplatz_stellplatz,STELLPLATZ_TIEFGARAGE,cleanupstellplatz_carport,
+STELLPLATZ_PARKHAUS,STELLPLATZ_DUPLEX,BOEDEN_KABELKANAELE,BOEDEN_DOPPELBODEN,BOEDEN_EDVVERKABELUNG,BOEDEN_FLIESENBODEN,BOEDEN_STEINBODEN,
+BOEDEN_TEPPICHBODEN,BOEDEN_PARKETTBODEN,BOEDEN_DIELENBODEN,BOEDEN_KUNSTSTOFFBODEN,BOEDEN_ESTRICH,BOEDEN_LAMINAT,BOEDEN_HOLZDIELEN,
+BOEDEN_FERTIGPARKETT,BOEDEN_LINOLEUM,BOEDEN_MARMORBODEN,BOEDEN_TERRAKOTTABODEN,BOEDEN_GRANITBODEN,HEIZUNGSART_OFENHEIZUNG,
+HEIZUNGSART_ZENTRALHEIZUNG,HEIZUNGSART_ETAGENHEIZUNG,HEIZUNGSART_FUSSBODENHEIZUNG,HEIZUNGSART_OFFENER_KAMIN,HEIZUNGSART_KACHELOFEN,
+HEIZUNGSART_LUFT_WASSER_WAERMEPUMPE,ENERGIETRAEGER_FERNHEIZUNG,ENERGIETRAEGER_OEL,ENERGIETRAEGER_GAS,ENERGIETRAEGER_ELEKTRO,
+ENERGIETRAEGER_SOLAR,ENERGIETRAEGER_ERDWAERME,ENERGIETRAEGER_HOLZ,ENERGIETRAEGER_KOHLE,ENERGIETRAEGER_BLOCKHEIZKRAFTWERK,
+ENERGIETRAEGER_PELLETS,ENERGIETRAEGER_FLUESSIGGAS,FENSTER_HOLZFENSTER,FENSTER_KUNSTSTOFFFENSTER,FENSTER_SPROSSENFENSTER,
+FENSTER_ALUMINIUMFENSTER,HAUSTYP,HAUSTYP_HOLZHAUS,HAUSTYP_MASSIVHAUS,HAUSTYP_FERTIGHAUS,HAUSTYP_PASSIVHAUS,HAUSTYP_NIEDRIGENERGIE,
+HAUSTYP_NEUBAUSTANDARD,HAUSTYP_KFW40,HAUSTYP_KFW60,HAUSTYP_KFW55,HAUSTYP_KFW70,HAUSTYP_MINERGIE_BAUWEISE,HAUSTYP_MINERGIE_ZERTIFIZIERT,
+ABSCHREIBUNG_ANLAGE,ABSCHREIBUNG_ANLAGE_KAPITALANLAGE,ABSCHREIBUNG_ANLAGE_DENKMALSCHUTZAFA,ABSCHREIBUNG_ANLAGE_SANIERUNGSAFA,AUSBLICK,
+AUSBLICK_FERNBLICK,AUSBLICK_SEEBLICK,AUSBLICK_BERGE,AUSBLICK_MEERBLICK,cleanupsonstiges_wohnen_rollstuhlgerecht,
+cleanupsonstiges_wohnen_wg_geeignet,SONSTIGES_WOHNEN_WOHNBERECHTIGUNGSSCHEIN,cleanupsonstiges_wohnen_seniorengerechtes_wohnen,
+cleanupsonstiges_wohnen_haustiere_erlaubt,SONSTIGES_WOHNEN_ALS_FERIENIMMOBILIE_GEEIGNET,SONSTIGES_WOHNEN_BARRIEREFREI, ZUSTAND_ZWANGSVERSTEIGERUNG, energieausweis,
+energieausweisart,energieausweisgebaeudeart,energieausweisausstelldatum,energieausweisgueltigbis,energieausweisbaujahr,energieausweisprimaerenergietraeger,
+energieausweiswaerme,energieausweisstrom,energieausweisbitmaske,cleanupprovision,cleanupprovisiontype,cleanupzustand_zwangsversteigerung,
+extractedzustand_zwangsversteigerung,cleanupzustand_projektiert,extractedzustand_projektiert,cleanupsonstiges_wohnen_wohnberechtigungsschein,
+extractedsonstiges_wohnen_wohnberechtigungsschein"
+```
+
+```{r}
+
+## Abfrage-Start
+start_date_change = as.character(as.Date(start_date) %m-% months(3))
+
+periode<-as.character(c(seq(as.Date(start_date_change),as.Date(end_date),by="20 days"),as.Date(end_date)+1))
+
+getObj<-function(date1,date2){
+  ch_query = glue(
+    "select distinct {attributes}, Anfragen, Exposeaufrufe, offerertype, firmenname
+  from
+  (
+  select distinct {attributes}, Anfragen, Exposeaufrufe 
+  from
+  (
+  select distinct {attributes}, Anfragen
+  from
+  (
+  SELECT distinct {attributes}
+  from default.Offers_8_11_t_rmt
+  where partitionchangedate >= '{date1}' and partitionchangedate < '{date2}'
+  and geoid like '108%'
+  and cleanupdataproblems <=3
+  and distributiontype='Miete'
+  and (estatetype like 'H%user' or estatetype='Wohnungen')
+  and wohnflaeche < 5000
+  and zimmer < 100
+  and fraud_level_id <= 0
+  and globalobjectkey 
+  in 
+  (select distinct globalobjectkey from
+(select globalobjectkey,cleanupaktivab,cleanupaktivbis,aktivAm from
+  (select distinct globalobjectkey,cleanupaktivab,if(cleanupaktivbis<'2000-01-01 00:00:00',toDateTime('2105-12-31 23:59:59'),cleanupaktivbis) as cleanupaktivbis
+from default.Offers_8_11_t_rmt 
+where partitionchangedate >= '{start_date_change}' and partitionchangedate <= '{end_date}'
+and concat(globalobjectkey,toString(changedate),toString(cleanupaktivab),toString(cleanupaktivbis)) in (
+   select concat(globalobjectkey,toString(changedate),toString(cleanupaktivab),toString(min(cleanupaktivbis))) from
+  (select distinct globalobjectkey,changedate,cleanupaktivab,if(cleanupaktivbis<'2000-01-01 00:00:00',toDateTime('2105-12-31 23:59:59'),cleanupaktivbis) as cleanupaktivbis
+  from default.Offers_8_11_t_rmt 
+  where partitionchangedate >= '{start_date_change}' and partitionchangedate <= '{end_date}'
+  and concat(globalobjectkey,toString(cleanupaktivab),toString(changedate)) in
+(
+select concat(globalobjectkey,toString(cleanupaktivab),toString(max(changedate)))
+from default.Offers_8_11_t_rmt 
+where partitionchangedate >= '{start_date_change}' and partitionchangedate <= '{end_date}'
+group by globalobjectkey,cleanupaktivab
+)
+  )group by globalobjectkey,changedate,cleanupaktivab
+  )
+  )any left join
+  (select globalobjectkey,historydate as aktivAm from grundprofil.Aktionen_t_rmt
+where historydate >='{start_date}' and historydate<='{end_date}'
+and aktion in ('expose','kontaktanfrage','app_expose','app_kontaktanfrage')
+)using globalobjectkey)
+where toRelativeDayNum(cleanupaktivab) > toRelativeDayNum(toDateTime('0000-00-00 00:00:00'))
+and toRelativeDayNum(cleanupaktivab)<= toRelativeDayNum(toDateTime('{end_date} 23:59:59'))
+and (
+toRelativeDayNum(toDateTime('{start_date} 00:00:00')) <= toRelativeDayNum(cleanupaktivab)
+or(toRelativeDayNum(cleanupaktivab) <= toRelativeDayNum(toDateTime('{start_date} 00:00:00')) and toRelativeDayNum(toDateTime('{end_date} 23:59:59'))<=toRelativeDayNum(cleanupaktivbis))
+or toRelativeDayNum(toDateTime('{start_date} 00:00:00')) <= toRelativeDayNum(cleanupaktivbis)
+or aktivAm>toDate('0000-00-00')
+))
+  )
+  any left join
+  (
+  select  toInt32(objid) objectid, sum(anfragen+inanfragen) as Anfragen
+  from dwh.VLogging_t_rmt
+  where historydate >='{start_date}' and historydate <= '{end_date}'
+  group by objectid
+  having Anfragen > 0
+  ) using objectid
+  )
+  any left join
+  (
+  select  toInt32(objid) objectid, sum(exposeaufrufe+inexposeaufrufe) as Exposeaufrufe
+  from  dwh.VLogging_t_rmt
+  where historydate >='{start_date}' and historydate <= '{end_date}'
+  group by objectid
+  having Exposeaufrufe > 0
+  ) using objectid
+  
+  )
+  any left join
+  (
+  select toInt32(adrid) adrid, offerertype, firmenname
+  from dbo.Adressen_t_rmt
+  ) using adrid
+  
+  order by  createdate"
+  )
+  obj<-dbGetQuery(clickhouse, ch_query)
+  return(as.data.table(obj))
+}
+
+Objekte<-data.table()
+for (i in 1:(length(periode)-1)) {
+  df<-getObj(periode[i],periode[i+1])
+  df$geoid <- as.integer64(as.character(df$geoid))
+  print(paste0(periode[i]," : ",nrow(df)))
+  Objekte<-rbindlist(list(Objekte,df))
+}
+Objekte<-distinct(Objekte)
+
+Encoding(Objekte$city)<-"UTF-8"
+Encoding(Objekte$geodescription)<-"UTF-8"
+Encoding(Objekte$cleanupstreet.streetname)<-"UTF-8"
+Encoding(Objekte$cleanupstreet.housenumber)<-"UTF-8"
+Encoding(Objekte$estatetype)<-"UTF-8"
+Encoding(Objekte$estatecategory)<-"UTF-8"
+Encoding(Objekte$firmenname)<-"UTF-8"
+Encoding(Objekte$headline)<-"UTF-8"
+Encoding(Objekte$textbodies)<-"UTF-8"
+Encoding(Objekte$provisiontext)<-"UTF-8"
+
+print(nrow(Objekte))
+```
+```{r}
+## Aufbereitung bzgl Duplikate
+aufbereitung <- Objekte
+
+#Erstellung der VerkettungsID aus den Vektoren globalobjectkey und kaufpreis + Anhängen der VerkettungsID an den Datensatz
+aufbereitung$VerkettungsID <- paste0(aufbereitung$globalobjectkey, aufbereitung$Kaltmiete)
+
+#Ordnen des Datensatz aufsteigend nach changedate, um in der Duplikaterkennung den letzten Zeitpunkt (außer Preisänderung) zu erhalten 
+aufbereitung <- aufbereitung[order(aufbereitung$changedate),]
+
+#Identifizieren der Duplikate
+Duplikate <- which(duplicated(aufbereitung$VerkettungsID, fromLast = TRUE))
+
+#Entfernen der Duplikate
+aufbereitung2 <- aufbereitung[-Duplikate,]
+
+#Entfernen der (jetzt überflüßigen) VerkettungsID
+aufbereitung2$VerkettungsID <- NULL
+```
+
